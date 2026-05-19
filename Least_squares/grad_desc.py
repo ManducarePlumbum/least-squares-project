@@ -1,7 +1,6 @@
 import numpy as np
-
-from .chisquare import CHI_SQUARE
-from .error import ERROR
+from chisquare import CHI_SQUARE
+from error import ERROR
 
 
 class GRADIENT_DESCENT:
@@ -38,7 +37,7 @@ class GRADIENT_DESCENT:
         if self.func == "Linear":
             return self.a * self.x + self.b
         elif self.func == "Exponential":
-            exponent = np.clip(self.a * self.b, -100, 100)
+            exponent = np.clip(self.a * self.x, -100, 100)
             return self.b * np.exp(exponent)
         else:
             raise ValueError
@@ -72,56 +71,147 @@ class GRADIENT_DESCENT:
         diff = self.y - f
 
         # Build weight matrix with regularization
-        W = np.array([[0.0 for _ in range(len(self.x))] for _ in range(len(self.x))])
-        for i in range(len(W[:, 0])):
-            W[i, i] = ERROR(
-                self.x[i],
-                self.y[i],
-                self.x_std[i],
-                self.y_std[i],
-                self.a,
-                self.b,
-                self.func,
-            ).eff_std()
+        weights = np.array(
+            [
+                1.0
+                / (
+                    ERROR(
+                        self.x[i],
+                        self.y[i],
+                        self.x_std[i],
+                        self.y_std[i],
+                        self.a,
+                        self.b,
+                        self.func,
+                    ).eff_std()
+                    ** 2
+                    + 1e-10
+                )
+                for i in range(len(self.x))
+            ]
+        )
 
         jac = self.jacobian()
 
-        # Compute gradient
-        try:
-            grad = jac.T @ W @ diff
-            # Clip gradient
-            grad = np.clip(grad, -1e6, 1e6)
+        grad = jac.T @ (weights * diff)
 
-            # Update parameters
-            self.a += self.alpha * grad[0]
-            self.b += self.alpha * grad[1]
-
-            # Re-apply constraints
-            self.a = np.clip(self.a, self.a_min, self.a_max)
-            self.b = np.maximum(self.b_min, self.b)
-
-        except Exception as e:
-            print(f"Gradient step failed: {e}")
-            pass
+        self.a += self.alpha * grad[0]
+        self.b += self.alpha * grad[1]
 
     def grad_run(self):
+        chis = np.array([0.0 for _ in range(self.Iterations)])
+        prev_loss = CHI_SQUARE(
+            self.x, self.y, self.x_std, self.y_std, self.a, self.b, "Exponential"
+        ).chi_square()
         for i in range(self.Iterations):
-            old_a, old_b = self.a, self.b
             self.grad_step()
+            curr_loss = CHI_SQUARE(
+                self.x, self.y, self.x_std, self.y_std, self.a, self.b, "Exponential"
+            ).chi_square()
+            if curr_loss > prev_loss * 1.01:
+                self.alpha *= 0.5
+            chis[i] = curr_loss
+            prev_loss = curr_loss
 
-            # Check for convergence
-            if abs(self.a - old_a) < 1e-8 and abs(self.b - old_b) < 1e-5:
-                print(f"Converged at iteration {i}")
-                break
+        return self.a, self.b, chis
 
-            # Check for NaN
-            if np.isnan(self.a) or np.isnan(self.b):
-                print(f"NaN at iteration {i}, reverting to last good values")
-                self.a, self.b = old_a, old_b
-                break
 
-            # Print progress
-            if i % 100 == 0:
-                print(f"Iter {i}: a={self.a:.6f}, b={self.b:.2f}")
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
 
-        return self.a, self.b
+    # Small exponential test dataset (30 points)
+    # True model: y = 5.0 * exp(-0.3 * x) + noise
+    x_test = np.array(
+        [
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0,
+            2.5,
+            3.0,
+            3.5,
+            4.0,
+            4.5,
+            5.0,
+            5.5,
+            6.0,
+            6.5,
+            7.0,
+            7.5,
+            8.0,
+            8.5,
+            9.0,
+            9.5,
+            10.0,
+            10.5,
+            11.0,
+            11.5,
+            12.0,
+            12.5,
+            13.0,
+            13.5,
+            14.0,
+            14.5,
+        ]
+    )
+
+    y_test = np.array(
+        [
+            5.12,
+            4.28,
+            3.71,
+            3.15,
+            2.89,
+            2.41,
+            2.05,
+            1.88,
+            1.52,
+            1.31,
+            1.19,
+            0.98,
+            0.89,
+            0.71,
+            0.68,
+            0.59,
+            0.48,
+            0.41,
+            0.39,
+            0.31,
+            0.28,
+            0.25,
+            0.21,
+            0.19,
+            0.15,
+            0.14,
+            0.12,
+            0.11,
+            0.09,
+            0.08,
+        ]
+    )
+
+    # Constant uncertainty estimates (adjust if your code needs heteroscedastic errors)
+    np.random.seed(42)
+    x_std_test = np.full_like(x_test, 0.05 * np.random.random())
+    y_std_test = np.full_like(y_test, 0.15 * np.random.random())
+
+    # True parameters for reference½
+    true_a, true_b = -0.3, 5.0
+
+    a, b, chis = GRADIENT_DESCENT(
+        x_test,
+        y_test,
+        x_std_test,
+        y_std_test,
+        -0.02,
+        4.5,
+        0.00000001,
+        "Exponential",
+        10000,
+    ).grad_run()
+    print(a, b)
+    print(chis[0])
+    print(chis[-1])
+    plt.plot(chis)
+    plt.show()

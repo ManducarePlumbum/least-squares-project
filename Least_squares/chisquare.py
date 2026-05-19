@@ -1,6 +1,6 @@
 import numpy as np
 
-from .error import ERROR
+from error import ERROR
 
 
 class CHI_SQUARE:

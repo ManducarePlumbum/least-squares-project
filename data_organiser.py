@@ -22,7 +22,7 @@ class DATA:
         )
 
     def data_point(self, T_crit):
-        first_accept = np.argmax(self.temp >= T_crit)
+        first_accept = np.where(self.temp >= T_crit)[0][0]
         t_0 = self.time[first_accept]
         t_1 = t_0 + self.integration_time
         bool_mask = (self.time >= t_0) & (self.time <= t_1)
