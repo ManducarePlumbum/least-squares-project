@@ -1,6 +1,6 @@
 import numpy as np
-from chisquare import CHI_SQUARE
-from error import ERROR
+from .chisquare import CHI_SQUARE
+from .error import ERROR
 
 
 class GRADIENT_DESCENT:
@@ -30,14 +30,14 @@ class GRADIENT_DESCENT:
         # Add constraints
         self.a_max = 1000  # Alpha must be ≤ 0 for cooling
         self.a_min = -1000  # Reasonable lower bound
-        self.b_min = 100  # R0 positive and reasonable
+        self.b_min = 0  # R0 positive and reasonable
 
     def function(self):
 
         if self.func == "Linear":
             return self.a * self.x + self.b
         elif self.func == "Exponential":
-            exponent = np.clip(self.a * self.x, -100, 100)
+            exponent = np.clip(self.a * self.x, -10000, 10000)
             return self.b * np.exp(exponent)
         else:
             raise ValueError
@@ -49,22 +49,15 @@ class GRADIENT_DESCENT:
             return np.array([[df_da[i], df_db] for i in range(len(self.x))])
         elif self.func == "Exponential":
             # Clip exponent
-            exponent = np.clip(self.a * self.x, -100, 100)
+            exponent = np.clip(self.a * self.x, -10000, 10000)
             exp_val = np.exp(exponent)
             df_da = self.x * self.b * exp_val
             df_db = exp_val
-            # Check for invalid values
-            df_da = np.nan_to_num(df_da, nan=0.0, posinf=1e10, neginf=-1e10)
-            df_db = np.nan_to_num(df_db, nan=0.0, posinf=1e10, neginf=0.0)
             return np.array([[df_da[i], df_db[i]] for i in range(len(self.x))])
         else:
             raise ValueError
 
     def grad_step(self):
-
-        # Apply constraints before step
-        self.a = np.clip(self.a, self.a_min, self.a_max)
-        self.b = np.maximum(self.b_min, self.b)
 
         # Compute function with safeguards
         f = self.function()
@@ -98,15 +91,19 @@ class GRADIENT_DESCENT:
         self.a += self.alpha * grad[0]
         self.b += self.alpha * grad[1]
 
+        # Apply constraints before step
+        self.a = np.clip(self.a, self.a_min, self.a_max)
+        self.b = np.maximum(self.b_min, self.b)
+
     def grad_run(self):
         chis = np.array([0.0 for _ in range(self.Iterations)])
         prev_loss = CHI_SQUARE(
-            self.x, self.y, self.x_std, self.y_std, self.a, self.b, "Exponential"
+            self.x, self.y, self.x_std, self.y_std, self.a, self.b, self.func
         ).chi_square()
         for i in range(self.Iterations):
             self.grad_step()
             curr_loss = CHI_SQUARE(
-                self.x, self.y, self.x_std, self.y_std, self.a, self.b, "Exponential"
+                self.x, self.y, self.x_std, self.y_std, self.a, self.b, self.func
             ).chi_square()
             if curr_loss > prev_loss * 1.01:
                 self.alpha *= 0.5
@@ -193,8 +190,8 @@ if __name__ == "__main__":
 
     # Constant uncertainty estimates (adjust if your code needs heteroscedastic errors)
     np.random.seed(42)
-    x_std_test = np.full_like(x_test, 0.05 * np.random.random())
-    y_std_test = np.full_like(y_test, 0.15 * np.random.random())
+    x_std_test = 0.05 * np.random.random(len(x_test))
+    y_std_test = 0.15 * np.random.random(len(x_test))
 
     # True parameters for reference½
     true_a, true_b = -0.3, 5.0
@@ -206,7 +203,7 @@ if __name__ == "__main__":
         y_std_test,
         -0.02,
         4.5,
-        0.00000001,
+        0.000001,
         "Exponential",
         10000,
     ).grad_run()
@@ -214,4 +211,8 @@ if __name__ == "__main__":
     print(chis[0])
     print(chis[-1])
     plt.plot(chis)
+    plt.show()
+
+    plt.plot(x_test, b * np.exp(a * x_test))
+    plt.errorbar(x_test, y_test, yerr=y_std_test, xerr=x_std_test, fmt="o")
     plt.show()
