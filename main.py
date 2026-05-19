@@ -17,19 +17,13 @@ means, sem = DATA(raw, integraltime, data_temps).data_assembly()
 print("temp range[", means[:, 1].min(), means[:, 1].max(), "]")
 print("resist range[", means[:, 0].min(), means[:, 0].max(), "]")
 
-init_alpha, init_logR0, chis = GRADIENT_DESCENT(
-    means[:, 1],
-    np.log(means[:, 0]),
-    sem[:, 1],
-    np.log(sem[:, 0]),
-    -0.1,
-    20,
-    0.00001,
-    "Linear",
-    10000,
-).grad_run()
-
-print(f"Initial guesses: alpha={init_alpha:.6f}, R0={np.exp(init_logR0):.2f}")
+# More robust initialization:
+log_R = np.log(means[:, 0])
+# Fit log(R) = log(R0) + alpha * T using linear regression
+coeffs = np.polyfit(means[:, 1], log_R, 1)
+init_alpha = np.clip(coeffs[0], -10, 10)
+init_R0 = np.exp(np.clip(coeffs[1], 0, 20))
+print(f"Initial guesses: alpha={init_alpha:.6f}, R0={init_R0:.2f}")
 
 # Now run exponential GD with these initials
 alpha, R0, chis = GRADIENT_DESCENT(
@@ -38,10 +32,10 @@ alpha, R0, chis = GRADIENT_DESCENT(
     sem[:, 1],
     sem[:, 0],
     init_alpha,
-    np.exp(init_logR0),
-    0.00001,
+    init_R0,
+    1e-4,
     "Exponential",
-    100000,
+    1000,
 ).grad_run()
 
 print(alpha, R0)

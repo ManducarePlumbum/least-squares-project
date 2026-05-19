@@ -33,21 +33,24 @@ class CHI_SQUARE:
 
     def chi_square(self):
         diff = self.y - self.function()
-        W = np.array([[0.0 for _ in range(len(self.x))] for _ in range(len(self.x))])
-        for i in range(len(W[:, 0])):
-            W[i, i] = (
-                1
-                / ERROR(
-                    self.x[i],
-                    self.y[i],
-                    self.x_std[i],
-                    self.y_std[i],
-                    self.a,
-                    self.b,
-                    self.func,
-                ).eff_std()
-                ** 2
-                + 1e-10
-            )
-        chi_sq = diff.T @ W @ diff
+        weights = np.array(
+            [
+                1.0
+                / (
+                    ERROR(
+                        self.x[i],
+                        self.y[i],
+                        self.x_std[i],
+                        self.y_std[i],
+                        self.a,
+                        self.b,
+                        self.func,
+                    ).eff_std()
+                    ** 2
+                    + 1e-10
+                )
+                for i in range(len(self.x))
+            ]
+        )
+        chi_sq = np.sum(weights * diff**2)
         return chi_sq

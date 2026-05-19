@@ -27,11 +27,6 @@ class GRADIENT_DESCENT:
         self.func = func
         self.Iterations = Iterations
 
-        # Add constraints
-        self.a_max = 1000  # Alpha must be ≤ 0 for cooling
-        self.a_min = -1000  # Reasonable lower bound
-        self.b_min = 0  # R0 positive and reasonable
-
     def function(self):
 
         if self.func == "Linear":
@@ -90,10 +85,6 @@ class GRADIENT_DESCENT:
 
         self.a += self.alpha * grad[0]
         self.b += self.alpha * grad[1]
-
-        # Apply constraints before step
-        self.a = np.clip(self.a, self.a_min, self.a_max)
-        self.b = np.maximum(self.b_min, self.b)
 
     def grad_run(self):
         chis = np.array([0.0 for _ in range(self.Iterations)])
