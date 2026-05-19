@@ -32,7 +32,7 @@ class GRADIENT_DESCENT:
         if self.func == "Linear":
             return self.a * self.x + self.b
         elif self.func == "Exponential":
-            exponent = np.clip(self.a * self.x, -10000, 10000)
+            exponent = np.clip(self.a * self.x, -50, 50)
             return self.b * np.exp(exponent)
         else:
             raise ValueError
@@ -44,18 +44,29 @@ class GRADIENT_DESCENT:
             return np.array([[df_da[i], df_db] for i in range(len(self.x))])
         elif self.func == "Exponential":
             # Clip exponent
-            exponent = np.clip(self.a * self.x, -10000, 10000)
+            exponent = np.clip(self.a * self.x, -50, 50)
             exp_val = np.exp(exponent)
             df_da = self.x * self.b * exp_val
             df_db = exp_val
+            # Clip Jacobian to prevent NaN propagation
+            df_da = np.clip(df_da, -1e15, 1e15)
+            df_db = np.clip(df_db, -1e15, 1e15)
             return np.array([[df_da[i], df_db[i]] for i in range(len(self.x))])
         else:
             raise ValueError
 
     def grad_step(self):
 
+        self.a = np.clip(self.a, -1.0, 0)  # Force negative alpha
+        self.b = np.clip(self.b, 100, 1e6)  # Reasonable R0 range
+
         # Compute function with safeguards
         f = self.function()
+
+        if np.any(np.isnan(f)):
+            self.alpha *= 0.5
+            return
+
         diff = self.y - f
 
         # Build weight matrix with regularization
@@ -79,12 +90,32 @@ class GRADIENT_DESCENT:
             ]
         )
 
+        weights = np.nan_to_num(weights, nan=1e-6, posinf=1e-6, neginf=1e-6)
+
         jac = self.jacobian()
 
-        grad = jac.T @ (weights * diff)
+        # Gradient descent with safeguard
+        try:
+            grad = -2 * jac.T @ (weights * diff)
 
-        self.a += self.alpha * grad[0]
-        self.b += self.alpha * grad[1]
+            # Clip gradients to prevent explosion
+            grad = np.clip(grad, -1e6, 1e6)
+
+            # Update parameters with adaptive step size
+            step_a = self.alpha * grad[0]
+            step_b = self.alpha * grad[1]
+
+            # Apply updates with bounds
+            self.a -= step_a
+            self.b -= step_b
+
+            # Re-apply bounds
+            self.a = np.clip(self.a, -1.0, 0)
+            self.b = np.clip(self.b, 100, 1e6)
+        except Exception as e:
+            # If gradient calculation fails, reduce learning rate
+            print(f"Gradient calculation failed: {e}, reducing learning rate")
+            self.alpha *= 0.5
 
     def grad_run(self):
         chis = np.array([0.0 for _ in range(self.Iterations)])

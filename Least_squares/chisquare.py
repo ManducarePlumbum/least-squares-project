@@ -27,7 +27,8 @@ class CHI_SQUARE:
         if self.func == "Linear":
             return self.a * self.x + self.b
         elif self.func == "Exponential":
-            return self.b * np.exp(self.a * self.x)
+            exponent = np.clip(self.a * self.x, -50, 50)
+            return self.b * np.exp(exponent)
         else:
             raise ValueError
 

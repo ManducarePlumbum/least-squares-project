@@ -21,8 +21,8 @@ print("resist range[", means[:, 0].min(), means[:, 0].max(), "]")
 log_R = np.log(means[:, 0])
 # Fit log(R) = log(R0) + alpha * T using linear regression
 coeffs = np.polyfit(means[:, 1], log_R, 1)
-init_alpha = np.clip(coeffs[0], -10, 10)
-init_R0 = np.exp(np.clip(coeffs[1], 0, 20))
+init_alpha = np.clip(coeffs[0], -0.5, -0.001)
+init_R0 = np.clip(np.exp(coeffs[1]), 1000, 50000)
 print(f"Initial guesses: alpha={init_alpha:.6f}, R0={init_R0:.2f}")
 
 # Now run exponential GD with these initials
@@ -33,9 +33,9 @@ alpha, R0, chis = GRADIENT_DESCENT(
     sem[:, 0],
     init_alpha,
     init_R0,
-    1e-4,
+    1e-6,
     "Exponential",
-    1000,
+    100000,
 ).grad_run()
 
 print(alpha, R0)
