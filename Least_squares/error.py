@@ -34,7 +34,7 @@ class ERROR:
             raise ValueError
 
     def eff_std(self):
-        eff_std = np.sqrt(self.y_err * 2 + self.df_dx() ** 2 * self.x_err**2)
+        eff_std = np.sqrt(self.y_err**2 + self.df_dx() ** 2 * self.x_err**2)
         return eff_std
 
 

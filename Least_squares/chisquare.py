@@ -1,16 +1,23 @@
 import numpy as np
 
-from error import ERROR
+from .error import ERROR
 
 
 class CHI_SQUARE:
     def __init__(
-        self, x_data: np.ndarray, y_data: np.ndarray, a: float, b: float, func: str
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        x_std: np.ndarray,
+        y_std: np.ndarray,
+        a: float,
+        b: float,
+        func: str,
     ) -> None:
-        self.x = np.array([np.mean(x_data[:, i]) for i in range(len(x_data[:, 0]))])
-        self.x_std = np.array([np.std(x_data[:, i]) for i in range(len(x_data[:, 0]))])
-        self.y = np.array([np.mean(y_data[:, i]) for i in range(len(x_data[:, 0]))])
-        self.y_std = np.array([np.std(y_data[:, i]) for i in range(len(x_data[:, 0]))])
+        self.x = x
+        self.x_std = x_std
+        self.y = y
+        self.y_std = y_std
         self.a = a
         self.b = b
         self.func = func

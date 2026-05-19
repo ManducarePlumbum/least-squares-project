@@ -58,7 +58,9 @@ def allan(t, y, name, plot=True):
     return np.array((tau, allans))
 
 
-data = np.genfromtxt("thermistor_boiling_data.csv", delimiter=",", skip_header=1)
+data = np.genfromtxt(
+    "../data/thermistor_boiling_data.csv", delimiter=",", skip_header=1
+)
 t = data[:, 0] / 1000
 p = data[:, 1]
 
@@ -69,7 +71,7 @@ allans = res[1]
 tau = res[0]
 valid_idx = np.where(tau <= upper)[0]
 min_idx = valid_idx[np.argmin(allans[valid_idx])]
-allan_min = tau[min_idx]
+allan_min = allans[min_idx]
 
 result = {
     "minimal allan": {"allan variance": allan_min, "time": tau[min_idx]},
@@ -79,7 +81,7 @@ with open("boiling_allan.json", "w") as f:
     json.dump(result, f, indent=4)
 
 
-data = np.genfromtxt("thermistor_Allan_data.csv", delimiter=",", skip_header=1)
+data = np.genfromtxt("../data/thermistor_Allan_data.csv", delimiter=",", skip_header=1)
 t = data[:, 0] / 1000
 p = data[:, 1]
 
@@ -90,7 +92,7 @@ allans = res[1]
 tau = res[0]
 valid_idx = np.where(tau <= upper)[0]
 min_idx = valid_idx[np.argmin(allans[valid_idx])]
-allan_min = tau[min_idx]
+allan_min = allans[min_idx]
 
 result = {
     "minimal allan": {"allan variance": allan_min, "time": tau[min_idx]},
