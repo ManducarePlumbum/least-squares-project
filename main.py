@@ -2,7 +2,8 @@ import numpy as np
 import json
 from data_organiser import DATA
 from Least_squares.grad_desc import GRADIENT_DESCENT
-from Least_squares.chisquare import CHI_SQUARE
+import matplotlib.pyplot as plt
+
 
 raw = "data/thermistor_boiling_data.csv"
 
@@ -16,32 +17,39 @@ means, sem = DATA(raw, integraltime, data_temps).data_assembly()
 print("temp range[", means[:, 1].min(), means[:, 1].max(), "]")
 print("resist range[", means[:, 0].min(), means[:, 0].max(), "]")
 
+init_alpha, init_logR0, chis = GRADIENT_DESCENT(
+    means[:, 1],
+    np.log(means[:, 0]),
+    sem[:, 1],
+    np.log(sem[:, 0]),
+    -0.1,
+    20,
+    0.00001,
+    "Linear",
+    10000,
+).grad_run()
 
-# SIMPLE linear fit for initial parameters (no GD, no ERROR class)
-Temp = means[:, 1]
-R_log = np.log(means[:, 0])
-p = np.polyfit(Temp, R_log, 1)  # p[0] = slope (alpha), p[1] = intercept (ln_R0)
-init_alpha = p[0]
-init_R0 = np.exp(p[1])
-
-print(f"Initial guesses: alpha={init_alpha:.6f}, R0={init_R0:.2f}")
+print(f"Initial guesses: alpha={init_alpha:.6f}, R0={np.exp(init_logR0):.2f}")
 
 # Now run exponential GD with these initials
-alpha, R0 = GRADIENT_DESCENT(
+alpha, R0, chis = GRADIENT_DESCENT(
     means[:, 1],
     means[:, 0],
     sem[:, 1],
     sem[:, 0],
     init_alpha,
-    init_R0,
-    0.001,
+    np.exp(init_logR0),
+    0.00001,
     "Exponential",
-    1000,
+    100000,
 ).grad_run()
 
-print(f"Final: alpha={alpha:.6f}, R0={R0:.2f}")
-print(
-    CHI_SQUARE(
-        means[:, 1], means[:, 0], sem[:, 1], sem[:, 0], alpha, R0, "Exponential"
-    ).chi_square()
-)
+print(alpha, R0)
+print(chis[0])
+print(chis[-1])
+plt.plot(chis)
+plt.show()
+
+plt.plot(means[:, 1], R0 * np.exp(alpha * means[:, 1]))
+plt.errorbar(means[:, 1], means[:, 0], yerr=sem[:, 0], fmt=".")
+plt.show()
