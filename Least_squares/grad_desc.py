@@ -118,19 +118,65 @@ class GRADIENT_DESCENT:
             self.alpha *= 0.5
 
     def grad_run(self):
-        chis = np.array([0.0 for _ in range(self.Iterations)])
+        chis = np.full(self.Iterations, np.nan)
+
+        # Calculate initial loss
         prev_loss = CHI_SQUARE(
             self.x, self.y, self.x_std, self.y_std, self.a, self.b, self.func
         ).chi_square()
+
+        # Validate initial loss
+        if np.isnan(prev_loss) or np.isinf(prev_loss):
+            print(f"Invalid initial loss: {prev_loss}")
+            print(f"Parameters: a={self.a}, b={self.b}")
+            return self.a, self.b, chis
+
         for i in range(self.Iterations):
+            # Store current parameters before step (for potential rollback)
+            a_old, b_old = self.a, self.b
+            old_alpha = self.alpha
+
+            # Take a gradient step
             self.grad_step()
+
+            # Calculate new loss
             curr_loss = CHI_SQUARE(
                 self.x, self.y, self.x_std, self.y_std, self.a, self.b, self.func
             ).chi_square()
-            if curr_loss > prev_loss * 1.01:
+
+            # Check if loss is valid
+            if np.isnan(curr_loss) or np.isinf(curr_loss):
+                # Bad step - revert and reduce learning rate
+                self.a, self.b = a_old, b_old
                 self.alpha *= 0.5
+                curr_loss = prev_loss
+                print(
+                    f"Iteration {i}: NaN loss, reduced learning rate to {self.alpha:.2e}"
+                )
+
+            # If loss increased significantly, revert and reduce learning rate
+            elif curr_loss > prev_loss * 1.01:
+                self.a, self.b = a_old, b_old
+                self.alpha *= 0.5
+                curr_loss = prev_loss
+                if i % 100 == 0:
+                    print(
+                        f"Iteration {i}: Loss increased, reduced LR to {self.alpha:.2e}"
+                    )
+
             chis[i] = curr_loss
             prev_loss = curr_loss
+
+            # Early stopping if converged
+            if i > 100 and np.std(chis[i - 100 : i]) < 1e-8 * prev_loss:
+                print(f"Converged at iteration {i}")
+                break
+
+            # Progress report
+            if (i + 1) % 500 == 0:
+                print(
+                    f"Iteration {i + 1}: loss={curr_loss:.2e}, a={self.a:.6f}, b={self.b:.2f}, LR={self.alpha:.2e}"
+                )
 
         return self.a, self.b, chis
 

@@ -11,7 +11,7 @@ with open("allan_variance/boiling_allan.json", "r") as f:
     loaded = json.load(f)
 integraltime = loaded["minimal allan"]["time"] * 1000
 
-data_temps = np.linspace(2, 96, 94)
+data_temps = np.linspace(2, 96, 86)
 means, sem = DATA(raw, integraltime, data_temps).data_assembly()
 
 print("temp range[", means[:, 1].min(), means[:, 1].max(), "]")
@@ -33,9 +33,9 @@ alpha, R0, chis = GRADIENT_DESCENT(
     sem[:, 0],
     init_alpha,
     init_R0,
-    1e-6,
+    1e-12,
     "Exponential",
-    100000,
+    10000,
 ).grad_run()
 
 print(alpha, R0)
