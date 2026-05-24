@@ -100,3 +100,23 @@ result = {
 
 with open("allan.json", "w") as f:
     json.dump(result, f, indent=4)
+
+data = np.genfromtxt("../data_2/raiser_temp_run_data.csv", delimiter=",", skip_header=1)
+t = data[:, 0] / 1000
+p = data[:, 1]
+
+res = allan(t, p, "allan_isochoric.png", plot=True)
+
+upper = 10
+allans = res[1]
+tau = res[0]
+valid_idx = np.where(tau <= upper)[0]
+min_idx = valid_idx[np.argmin(allans[valid_idx])]
+allan_min = allans[min_idx]
+
+result = {
+    "minimal allan": {"allan variance": allan_min, "time": tau[min_idx]},
+}
+
+with open("allan_isochoric.json", "w") as f:
+    json.dump(result, f, indent=4)
